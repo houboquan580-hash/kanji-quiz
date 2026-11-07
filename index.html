@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -102,17 +101,19 @@
     }
     .correct { color: #16a34a; }
     .wrong { color: #dc2626; }
+    .loading { font-size: 18px; color: #4f46e5; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="top-bar">
-    <span id="font-badge" class="badge">甲骨文</span>
-    <span id="progress-text" class="progress">1 / 20</span>
+    <span id="font-badge" class="badge">載入中...</span>
+    <span id="progress-text" class="progress">0 / 20</span>
   </div>
 
   <div class="image-container">
-    <img id="quiz-img" src="" alt="古文字圖片">
+    <div id="loading-text" class="loading">正在掃描 GitHub 題庫圖片...</div>
+    <img id="quiz-img" src="" alt="古文字圖片" style="display: none;">
   </div>
 
   <div class="bottom-card">
@@ -125,34 +126,59 @@
   </div>
 
   <script>
-    // 1. 將你的 70 個字直接填入這個陣列（不需要加 .png）
-    const CHAR_FILES = [
-      "人", "須", "長"
-      // 這裡繼續填入你裁好的其餘漢字，例如："口", "目", "手", "足" ...
-    ];
-
+    // GitHub 倉庫資訊
+    const REPO_OWNER = "houboquan580-hash";
+    const REPO_NAME = "kanji-quiz";
     const FONT_FOLDERS = ["甲骨文", "金文", "秦隸", "小篆"];
-    
+
     let quizPool = [];
     let currentQuiz = [];
     let currentIdx = 0;
     let isAnswered = false;
 
-    function initPool() {
+    // 自動抓取 4 個資料夾內的所有圖片
+    async function fetchAllImages() {
       quizPool = [];
-      CHAR_FILES.forEach(charName => {
-        FONT_FOLDERS.forEach(font => {
-          quizPool.push({
-            imgPath: `./${font}/${charName}.png`,
-            font: font,
-            answer: charName
+      document.getElementById('loading-text').style.display = 'block';
+      document.getElementById('quiz-img').style.display = 'none';
+
+      for (const font of FONT_FOLDERS) {
+        try {
+          const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${encodeURIComponent(font)}`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) continue;
+
+          const files = await response.json();
+          files.forEach(file => {
+            if (file.type === 'file' && /\.(png|jpg|jpeg)$/i.test(file.name)) {
+              // 自動提取答案：支援 "耳.png" 或 "001_耳.png"
+              let nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+              let answer = nameWithoutExt.includes('_') ? nameWithoutExt.split('_').pop() : nameWithoutExt;
+
+              quizPool.push({
+                imgPath: file.path,
+                font: font,
+                answer: answer
+              });
+            }
           });
-        });
-      });
+        } catch (e) {
+          console.error(`載入 ${font} 失敗:`, e);
+        }
+      }
+
+      if (quizPool.length === 0) {
+        alert("無法讀取圖片，請確認資料夾與 GitHub 上傳無誤！");
+        return;
+      }
+
+      document.getElementById('loading-text').style.display = 'none';
+      document.getElementById('quiz-img').style.display = 'block';
+      startNewQuiz();
     }
 
     function startNewQuiz() {
-      initPool();
+      // 隨機打亂並抽取最多 20 題
       quizPool.sort(() => Math.random() - 0.5);
       currentQuiz = quizPool.slice(0, Math.min(20, quizPool.length));
       currentIdx = 0;
@@ -165,7 +191,7 @@
       
       document.getElementById('font-badge').innerText = q.font;
       document.getElementById('progress-text').innerText = `${currentIdx + 1} / ${currentQuiz.length}`;
-      document.getElementById('quiz-img').src = q.imgPath;
+      document.getElementById('quiz-img').src = encodeURI(q.imgPath);
       
       const input = document.getElementById('answer-input');
       input.value = '';
@@ -212,7 +238,8 @@
       if (e.key === 'Enter') handleSubmit();
     });
 
-    startNewQuiz();
+    // 啟動全自動載入
+    fetchAllImages();
   </script>
 </body>
 </html>
