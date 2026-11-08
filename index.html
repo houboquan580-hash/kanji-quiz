@@ -78,21 +78,42 @@
       background: #ffffff;
     }
 
-    /* Part 2 四方格與解析容器 */
+    /* Part 2 四方格畫布區 */
     .p2-container {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px;
+      padding: 12px 16px;
       overflow-y: auto;
-      gap: 12px;
+      gap: 10px;
     }
     .p2-title {
       text-align: center;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: bold;
       color: #1f2937;
     }
+    .p2-toolbar {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .tool-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #374151;
+    }
+    .tool-btn.active {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #4f46e5;
+    }
+
     .p2-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -102,7 +123,7 @@
       background: #ffffff;
       border: 1px solid #e5e7eb;
       border-radius: 10px;
-      padding: 8px;
+      padding: 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -112,15 +133,38 @@
       font-size: 13px;
       font-weight: bold;
       color: #4f46e5;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .p2-card img {
+    
+    /* 畫布與底圖疊加容器 */
+    .canvas-wrapper {
+      position: relative;
       width: 100%;
       height: 110px;
-      object-fit: contain;
-      background: #f9fafb;
+      background: #fafafa;
       border-radius: 6px;
+      overflow: hidden;
+      border: 1px dashed #cbd5e1;
     }
+    .canvas-bg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      opacity: 0; /* 預設遮罩隱藏 */
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .draw-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 2;
+      touch-action: none; /* 防止手機滑動頁面干擾繪圖 */
+      cursor: crosshair;
+      transition: opacity 0.3s ease;
+    }
+
     .p2-analysis {
       background: #ffffff;
       border-radius: 12px;
@@ -136,10 +180,10 @@
     }
     .p2-analysis strong { color: #4f46e5; }
 
-    /* 底部作答與控制區 */
+    /* 底部操作區 */
     .bottom-card {
       background: #ffffff;
-      padding: 20px 20px 28px;
+      padding: 16px 20px 24px;
       border-top-left-radius: 20px;
       border-top-right-radius: 20px;
       box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
@@ -209,17 +253,50 @@
     <img id="quiz-img" src="" alt="古文字圖片" style="display: none;">
   </div>
 
-  <!-- Part 2 畫面（手機 2x2 四方格 + 形構演變） -->
+  <!-- Part 2 畫面（4格繪圖畫布 + 重疊對照） -->
   <div id="part2-view" class="p2-container" style="display: none;">
-    <div class="p2-title">請於紙上畫出「<span id="p2-char-name" style="color:#4f46e5;">?</span>」並思考其形構</div>
+    <div class="p2-title">請於下方畫布寫出「<span id="p2-char-name" style="color:#4f46e5;">?</span>」之四體字形</div>
+    
+    <!-- 畫布工具列 -->
+    <div class="p2-toolbar">
+      <button type="button" class="tool-btn active" id="btn-pen" onclick="setTool('pen')">✏️ 畫筆</button>
+      <button type="button" class="tool-btn" id="btn-eraser" onclick="setTool('eraser')">🧹 橡皮擦</button>
+      <button type="button" class="tool-btn" onclick="clearAllCanvases()">🗑️ 重畫</button>
+    </div>
+
+    <!-- 4 格獨立畫布 -->
     <div class="p2-grid">
-      <div class="p2-card"><span class="p2-tag">甲骨文</span><img id="p2-img-jiagu" src=""></div>
-      <div class="p2-card"><span class="p2-tag">金文</span><img id="p2-img-jin" src=""></div>
-      <div class="p2-card"><span class="p2-tag">秦隸</span><img id="p2-img-qin" src=""></div>
-      <div class="p2-card"><span class="p2-tag">小篆</span><img id="p2-img-zhuan" src=""></div>
+      <div class="p2-card">
+        <span class="p2-tag">甲骨文</span>
+        <div class="canvas-wrapper">
+          <img id="p2-img-jiagu" class="canvas-bg" src="">
+          <canvas class="draw-canvas" id="cvs-jiagu" width="300" height="200"></canvas>
+        </div>
+      </div>
+      <div class="p2-card">
+        <span class="p2-tag">金文</span>
+        <div class="canvas-wrapper">
+          <img id="p2-img-jin" class="canvas-bg" src="">
+          <canvas class="draw-canvas" id="cvs-jin" width="300" height="200"></canvas>
+        </div>
+      </div>
+      <div class="p2-card">
+        <span class="p2-tag">秦隸</span>
+        <div class="canvas-wrapper">
+          <img id="p2-img-qin" class="canvas-bg" src="">
+          <canvas class="draw-canvas" id="cvs-qin" width="300" height="200"></canvas>
+        </div>
+      </div>
+      <div class="p2-card">
+        <span class="p2-tag">小篆</span>
+        <div class="canvas-wrapper">
+          <img id="p2-img-zhuan" class="canvas-bg" src="">
+          <canvas class="draw-canvas" id="cvs-zhuan" width="300" height="200"></canvas>
+        </div>
+      </div>
     </div>
     
-    <!-- 蓋牌揭曉卡片 -->
+    <!-- 蓋牌揭曉解析卡片 -->
     <div id="p2-analysis-card" class="p2-analysis" style="display: none;">
       <div><strong>【造字類別】</strong> <span id="p2-cat"></span></div>
       <div><strong>【形構之旨】</strong> <span id="p2-meaning"></span></div>
@@ -251,7 +328,7 @@
     const REPO_NAME = "kanji-quiz";
     const FONT_FOLDERS = ["甲骨文", "金文", "秦隸", "小篆"];
 
-    /* ================= Part 1 變數與邏輯 (完全保留) ================= */
+    /* ================= Part 1 隸定刷題邏輯 (原封不動完全保留) ================= */
     let quizPool = [];
     let currentQuiz = [];
     let currentIdx = 0;
@@ -359,7 +436,87 @@
       if (e.key === 'Enter') handleSubmit();
     });
 
-    /* ================= Part 2 蓋牌自評邏輯 (新增) ================= */
+
+    /* ================= Part 2 繪圖畫布與蓋牌對照邏輯 ================= */
+    let currentTool = 'pen';
+    const canvasIds = ['cvs-jiagu', 'cvs-jin', 'cvs-qin', 'cvs-zhuan'];
+
+    // 初始化 4 個 Canvas 的觸控與滑鼠繪圖
+    function initCanvases() {
+      canvasIds.forEach(id => {
+        const cvs = document.getElementById(id);
+        if (!cvs) return;
+        const ctx = cvs.getContext('2d');
+        let isDrawing = false;
+
+        function getPos(e) {
+          const rect = cvs.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          const scaleX = cvs.width / rect.width;
+          const scaleY = cvs.height / rect.height;
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+          };
+        }
+
+        function startDraw(e) {
+          isDrawing = true;
+          const pos = getPos(e);
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+          if (!isDrawing) return;
+          if (e.cancelable) e.preventDefault();
+          const pos = getPos(e);
+
+          if (currentTool === 'pen') {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#dc2626'; // 紅色筆畫，比對時清晰顯眼
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+          } else {
+            ctx.globalCompositeOperation = 'destination-out'; // 橡皮擦模式
+            ctx.lineWidth = 22;
+          }
+
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        }
+
+        function stopDraw() { isDrawing = false; }
+
+        cvs.addEventListener('mousedown', startDraw);
+        cvs.addEventListener('mousemove', draw);
+        cvs.addEventListener('mouseup', stopDraw);
+        cvs.addEventListener('mouseleave', stopDraw);
+
+        cvs.addEventListener('touchstart', startDraw, {passive: false});
+        cvs.addEventListener('touchmove', draw, {passive: false});
+        cvs.addEventListener('touchend', stopDraw);
+      });
+    }
+
+    function setTool(tool) {
+      currentTool = tool;
+      document.getElementById('btn-pen').classList.toggle('active', tool === 'pen');
+      document.getElementById('btn-eraser').classList.toggle('active', tool === 'eraser');
+    }
+
+    function clearAllCanvases() {
+      canvasIds.forEach(id => {
+        const cvs = document.getElementById(id);
+        if (cvs) {
+          const ctx = cvs.getContext('2d');
+          ctx.clearRect(0, 0, cvs.width, cvs.height);
+        }
+      });
+    }
+
     let p2QuizList = [];
     let p2CurrentIdx = 0;
     let p2IsRevealed = false;
@@ -386,13 +543,18 @@
       document.getElementById('progress-text').innerText = `${p2CurrentIdx + 1} / ${p2QuizList.length}`;
       document.getElementById('p2-char-name').innerText = charName;
 
-      // 設置四方格圖片路徑
+      // 重置畫布與圖片透明度
+      clearAllCanvases();
+      document.querySelectorAll('.canvas-bg').forEach(img => img.style.opacity = '0');
+      document.querySelectorAll('.draw-canvas').forEach(cvs => cvs.style.opacity = '1');
+
+      // 設置古文字底圖路徑
       document.getElementById('p2-img-jiagu').src = encodeURI(`甲骨文/${charName}.png`);
       document.getElementById('p2-img-jin').src = encodeURI(`金文/${charName}.png`);
       document.getElementById('p2-img-qin').src = encodeURI(`秦隸/${charName}.png`);
       document.getElementById('p2-img-zhuan').src = encodeURI(`小篆/${charName}.png`);
 
-      // 蓋牌：隱藏解析區
+      // 隱藏解析卡片
       document.getElementById('p2-analysis-card').style.display = 'none';
       document.getElementById('p2-action-btn').innerText = '檢視標準四方格與本義解析';
     }
@@ -405,6 +567,10 @@
         document.getElementById('p2-cat').innerText = data.category || '象形';
         document.getElementById('p2-meaning').innerText = data.meaning || '暫無解析';
         document.getElementById('p2-evolution').innerText = data.evolution || '暫無演變說明';
+
+        // 揭曉：顯示背景底圖，將學生紅筆跡改為半透明疊加比對
+        document.querySelectorAll('.canvas-bg').forEach(img => img.style.opacity = '1');
+        document.querySelectorAll('.draw-canvas').forEach(cvs => cvs.style.opacity = '0.65');
 
         document.getElementById('p2-analysis-card').style.display = 'flex';
         p2IsRevealed = true;
@@ -425,6 +591,7 @@
       }
     }
 
+
     /* ================= 模式切換邏輯 ================= */
     function switchMode(mode) {
       document.getElementById('tab-p1').className = mode === 1 ? 'tab-btn active' : 'tab-btn';
@@ -443,7 +610,8 @@
       }
     }
 
-    // 啟動 Part 1 全自動載入
+    // 初始化畫布監聽器並啟動 Part 1 全自動載入
+    initCanvases();
     fetchAllImages();
   </script>
 </body>
