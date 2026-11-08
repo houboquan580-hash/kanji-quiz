@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>古文字隸定刷題</title>
+  <title>古文字隸定與形構演變刷題</title>
+  <!-- 引入外部知識庫檔案 -->
+  <script src="knowledge.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -14,6 +16,30 @@
       height: 100dvh;
       background-color: #f4f5f7;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* 頂部模式切換頁籤 */
+    .mode-tabs {
+      display: flex;
+      background: #e5e7eb;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 15px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #4b5563;
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: #4f46e5;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
 
     .top-bar {
@@ -34,6 +60,7 @@
     }
     .progress { font-size: 14px; color: #6b7280; font-weight: 500; }
 
+    /* Part 1 圖片展示區 */
     .image-container {
       flex: 1;
       display: flex;
@@ -51,6 +78,65 @@
       background: #ffffff;
     }
 
+    /* Part 2 四方格與解析容器 */
+    .p2-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow-y: auto;
+      gap: 12px;
+    }
+    .p2-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    .p2-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .p2-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .p2-tag {
+      font-size: 13px;
+      font-weight: bold;
+      color: #4f46e5;
+      margin-bottom: 6px;
+    }
+    .p2-card img {
+      width: 100%;
+      height: 110px;
+      object-fit: contain;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+    .p2-analysis {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 14px;
+      border-left: 4px solid #4f46e5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #374151;
+    }
+    .p2-analysis strong { color: #4f46e5; }
+
+    /* 底部作答與控制區 */
     .bottom-card {
       background: #ffffff;
       padding: 20px 20px 28px;
@@ -106,23 +192,57 @@
 </head>
 <body>
 
+  <!-- 頂部切換頁籤 -->
+  <div class="mode-tabs">
+    <button id="tab-p1" class="tab-btn active" onclick="switchMode(1)">Part 1：隸定刷題 (20題)</button>
+    <button id="tab-p2" class="tab-btn" onclick="switchMode(2)">Part 2：形構演變 (4題)</button>
+  </div>
+
   <div class="top-bar">
     <span id="font-badge" class="badge">載入中...</span>
     <span id="progress-text" class="progress">0 / 20</span>
   </div>
 
-  <div class="image-container">
+  <!-- Part 1 畫面 -->
+  <div id="part1-view" class="image-container">
     <div id="loading-text" class="loading">正在掃描 GitHub 題庫圖片...</div>
     <img id="quiz-img" src="" alt="古文字圖片" style="display: none;">
   </div>
 
-  <div class="bottom-card">
-    <div class="question-title">這個漢字的隸定為何？</div>
-    <div class="input-group">
-      <input type="text" id="answer-input" class="char-input" placeholder="輸入漢字" autocomplete="off">
-      <button id="action-btn" class="submit-btn" onclick="handleSubmit()">提交</button>
+  <!-- Part 2 畫面（手機 2x2 四方格 + 形構演變） -->
+  <div id="part2-view" class="p2-container" style="display: none;">
+    <div class="p2-title">請於紙上畫出「<span id="p2-char-name" style="color:#4f46e5;">?</span>」並思考其形構</div>
+    <div class="p2-grid">
+      <div class="p2-card"><span class="p2-tag">甲骨文</span><img id="p2-img-jiagu" src=""></div>
+      <div class="p2-card"><span class="p2-tag">金文</span><img id="p2-img-jin" src=""></div>
+      <div class="p2-card"><span class="p2-tag">秦隸</span><img id="p2-img-qin" src=""></div>
+      <div class="p2-card"><span class="p2-tag">小篆</span><img id="p2-img-zhuan" src=""></div>
     </div>
-    <div id="result-msg" class="result-msg"></div>
+    
+    <!-- 蓋牌揭曉卡片 -->
+    <div id="p2-analysis-card" class="p2-analysis" style="display: none;">
+      <div><strong>【造字類別】</strong> <span id="p2-cat"></span></div>
+      <div><strong>【形構之旨】</strong> <span id="p2-meaning"></span></div>
+      <div><strong>【演變脈絡】</strong> <span id="p2-evolution"></span></div>
+    </div>
+  </div>
+
+  <!-- 底部操作列 -->
+  <div class="bottom-card">
+    <!-- Part 1 操作控制項 -->
+    <div id="p1-controls" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+      <div class="question-title">這個漢字的隸定為何？</div>
+      <div class="input-group">
+        <input type="text" id="answer-input" class="char-input" placeholder="輸入漢字" autocomplete="off">
+        <button id="action-btn" class="submit-btn" onclick="handleSubmit()">提交</button>
+      </div>
+      <div id="result-msg" class="result-msg"></div>
+    </div>
+
+    <!-- Part 2 操作控制項 -->
+    <div id="p2-controls" style="width: 100%; display: none; text-align: center;">
+      <button id="p2-action-btn" class="submit-btn" style="width: 100%; max-width: 320px;" onclick="handleP2Submit()">檢視標準四方格與本義解析</button>
+    </div>
   </div>
 
   <script>
@@ -131,6 +251,7 @@
     const REPO_NAME = "kanji-quiz";
     const FONT_FOLDERS = ["甲骨文", "金文", "秦隸", "小篆"];
 
+    /* ================= Part 1 變數與邏輯 (完全保留) ================= */
     let quizPool = [];
     let currentQuiz = [];
     let currentIdx = 0;
@@ -238,7 +359,91 @@
       if (e.key === 'Enter') handleSubmit();
     });
 
-    // 啟動全自動載入
+    /* ================= Part 2 蓋牌自評邏輯 (新增) ================= */
+    let p2QuizList = [];
+    let p2CurrentIdx = 0;
+    let p2IsRevealed = false;
+
+    function startP2Quiz() {
+      if (typeof ANCIENT_KNOWLEDGE === 'undefined') {
+        alert("未讀取到 knowledge.js！請確認該檔案已上傳至 GitHub，並與 index.html 放置在相同目錄。");
+        return;
+      }
+      const keys = Object.keys(ANCIENT_KNOWLEDGE);
+      if (keys.length === 0) return;
+
+      // 隨機抽取 4 題
+      p2QuizList = keys.sort(() => Math.random() - 0.5).slice(0, 4);
+      p2CurrentIdx = 0;
+      showP2Question();
+    }
+
+    function showP2Question() {
+      p2IsRevealed = false;
+      const charName = p2QuizList[p2CurrentIdx];
+
+      document.getElementById('font-badge').innerText = "形構演變";
+      document.getElementById('progress-text').innerText = `${p2CurrentIdx + 1} / ${p2QuizList.length}`;
+      document.getElementById('p2-char-name').innerText = charName;
+
+      // 設置四方格圖片路徑
+      document.getElementById('p2-img-jiagu').src = encodeURI(`甲骨文/${charName}.png`);
+      document.getElementById('p2-img-jin').src = encodeURI(`金文/${charName}.png`);
+      document.getElementById('p2-img-qin').src = encodeURI(`秦隸/${charName}.png`);
+      document.getElementById('p2-img-zhuan').src = encodeURI(`小篆/${charName}.png`);
+
+      // 蓋牌：隱藏解析區
+      document.getElementById('p2-analysis-card').style.display = 'none';
+      document.getElementById('p2-action-btn').innerText = '檢視標準四方格與本義解析';
+    }
+
+    function handleP2Submit() {
+      if (!p2IsRevealed) {
+        const charName = p2QuizList[p2CurrentIdx];
+        const data = ANCIENT_KNOWLEDGE[charName] || {};
+
+        document.getElementById('p2-cat').innerText = data.category || '象形';
+        document.getElementById('p2-meaning').innerText = data.meaning || '暫無解析';
+        document.getElementById('p2-evolution').innerText = data.evolution || '暫無演變說明';
+
+        document.getElementById('p2-analysis-card').style.display = 'flex';
+        p2IsRevealed = true;
+
+        if (p2CurrentIdx < p2QuizList.length - 1) {
+          document.getElementById('p2-action-btn').innerText = '下一題';
+        } else {
+          document.getElementById('p2-action-btn').innerText = '完成 4 題（重新抽題）';
+        }
+      } else {
+        p2CurrentIdx++;
+        if (p2CurrentIdx >= p2QuizList.length) {
+          alert("🎉 Part 2 形構演變 4 題測驗結束！重新隨機抽題。");
+          startP2Quiz();
+        } else {
+          showP2Question();
+        }
+      }
+    }
+
+    /* ================= 模式切換邏輯 ================= */
+    function switchMode(mode) {
+      document.getElementById('tab-p1').className = mode === 1 ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tab-p2').className = mode === 2 ? 'tab-btn active' : 'tab-btn';
+
+      document.getElementById('part1-view').style.display = mode === 1 ? 'flex' : 'none';
+      document.getElementById('part2-view').style.display = mode === 2 ? 'flex' : 'none';
+
+      document.getElementById('p1-controls').style.display = mode === 1 ? 'flex' : 'none';
+      document.getElementById('p2-controls').style.display = mode === 2 ? 'block' : 'none';
+
+      if (mode === 1) {
+        if (currentQuiz.length > 0) showQuestion();
+      } else {
+        startP2Quiz();
+      }
+    }
+
+    // 啟動 Part 1 全自動載入
     fetchAllImages();
   </script>
 </body>
